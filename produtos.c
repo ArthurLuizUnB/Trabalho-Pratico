@@ -58,3 +58,78 @@ void listar_produtos(Produto *head) {
     }
     pausar_tela();
 }
+
+Produto* buscar_produto(Produto *head, int codigo) {
+    Produto *atual = head;
+    while (atual != NULL) {
+        if (atual->codigo == codigo) return atual;
+        atual = atual->prox;
+    }
+    return NULL;
+}
+
+void editar_produto(Produto *head) {
+    int codigo;
+    printf("Digite o ID do produto para editar: ");
+    scanf("%d", &codigo);
+    limpar_buffer();
+
+    Produto *p = buscar_produto(head, codigo);
+    if (p == NULL) {
+        printf("Produto nao encontrado.\n");
+        pausar_tela();
+        return;
+    }
+
+    printf("Editando: %s\n", p->nome);
+    printf("Novo nome (ENTER para manter atual): ");
+    char buffer[50];
+    fgets(buffer, sizeof(buffer), stdin);
+    remover_quebra_linha(buffer);
+    if (strlen(buffer) > 0) strcpy(p->nome, buffer);
+
+    printf("Novo preco (-1 para manter): ");
+    float novo_preco;
+    scanf("%f", &novo_preco);
+    limpar_buffer();
+    if (novo_preco >= 0) p->preco = novo_preco;
+
+    printf("Novo estoque (-1 para manter): ");
+    int nova_qtd;
+    scanf("%d", &nova_qtd);
+    limpar_buffer();
+    if (nova_qtd >= 0) p->quantidade_estoque = nova_qtd;
+
+    printf("Dados atualizados.\n");
+    pausar_tela();
+}
+
+void remover_produto(Produto **head) {
+    int codigo;
+    printf("ID do produto a remover: ");
+    scanf("%d", &codigo);
+    limpar_buffer();
+
+    Produto *atual = *head;
+    Produto *ant = NULL;
+
+    // Busca o no e mantem o ponteiro do anterior (ant)
+    while (atual != NULL && atual->codigo != codigo) {
+        ant = atual;
+        atual = atual->prox;
+    }
+
+    if (atual == NULL) {
+        printf("Produto nao existe.\n");
+        pausar_tela();
+        return;
+    }
+
+    // Se ant for NULL, estamos removendo o primeiro da lista
+    if (ant == NULL) *head = atual->prox;
+    else ant->prox = atual->prox;
+
+    free(atual);
+    printf("Produto removido.\n");
+    pausar_tela();
+}
