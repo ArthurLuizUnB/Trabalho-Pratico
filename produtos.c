@@ -134,3 +134,42 @@ void remover_produto(Produto **head) {
     printf("Produto removido.\n");
     pausar_tela();
 }
+
+// Ordenacao (Troca conteudo dos nos para nao quebrar ponteiros)
+void ordenar_produtos_codigo(Produto *head) {
+    if (head == NULL || head->prox == NULL) return; 
+
+    int trocou;
+    Produto *ptr1;
+    Produto *lptr = NULL;
+
+    do {
+        trocou = 0;
+        ptr1 = head;
+        while (ptr1->prox != lptr) {
+            if (ptr1->codigo > ptr1->prox->codigo) {
+                // Swap (troca) manual de todos os campos
+                int temp_cod = ptr1->codigo;
+                char temp_nome[50];
+                float temp_preco = ptr1->preco;
+                int temp_qtd = ptr1->quantidade_estoque;
+
+                strcpy(temp_nome, ptr1->nome);
+                
+                ptr1->codigo = ptr1->prox->codigo;
+                strcpy(ptr1->nome, ptr1->prox->nome);
+                ptr1->preco = ptr1->prox->preco;
+                ptr1->quantidade_estoque = ptr1->prox->quantidade_estoque;
+
+                ptr1->prox->codigo = temp_cod;
+                strcpy(ptr1->prox->nome, temp_nome);
+                ptr1->prox->preco = temp_preco;
+                ptr1->prox->quantidade_estoque = temp_qtd;
+
+                trocou = 1;
+            }
+            ptr1 = ptr1->prox;
+        }
+        lptr = ptr1;
+    } while (trocou);
+}
