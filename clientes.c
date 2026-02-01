@@ -67,3 +67,62 @@ Cliente* buscar_cliente(Cliente *head, char *cpf) {
     }
     return NULL; // Nao achou
 }
+
+void listar_clientes(Cliente *head) {
+    printf("\n--- Clientes Cadastrados ---\n");
+    if (head == NULL) {
+        printf("Base de clientes vazia.\n");
+        pausar_tela();
+        return;
+    }
+    // Itera ate o ponteiro ser NULL (fim da lista)
+    Cliente *atual = head;
+    while (atual != NULL) {
+        printf("CPF: %s | Nome: %s | Email: %s\n", atual->cpf, atual->nome, atual->email);
+        atual = atual->prox;
+    }
+    pausar_tela();
+}
+
+void editar_cliente(Cliente *head) {
+    char cpf[15];
+    printf("Digite o CPF para editar: ");
+    fgets(cpf, sizeof(cpf), stdin);
+    remover_quebra_linha(cpf);
+
+    // Reusa a funcao de busca pra nao duplicar logica
+    Cliente *c = buscar_cliente(head, cpf);
+    if (c == NULL) {
+        printf("Cliente nao localizado.\n");
+        pausar_tela();
+        return;
+    }
+
+    printf("Editando: %s\n", c->nome);
+    char buffer[80];
+    
+    // Logica de UX: Leitura no buffer. Se apertar Enter (len=0), nao altera o dado original.
+    // Isso permite editar so um campo sem ter que redigitar tudo.
+    printf("Novo Nome (ENTER mantem): ");
+    fgets(buffer, sizeof(buffer), stdin);
+    remover_quebra_linha(buffer);
+    if (strlen(buffer) > 0) strcpy(c->nome, buffer);
+
+    printf("Novo Email (ENTER mantem): ");
+    fgets(buffer, sizeof(buffer), stdin);
+    remover_quebra_linha(buffer);
+    if (strlen(buffer) > 0) strcpy(c->email, buffer);
+
+    printf("Novo Telefone (ENTER mantem): ");
+    fgets(buffer, sizeof(buffer), stdin);
+    remover_quebra_linha(buffer);
+    if (strlen(buffer) > 0) strcpy(c->telefone, buffer);
+
+    printf("Nova Data Nasc (ENTER mantem): ");
+    fgets(buffer, sizeof(buffer), stdin);
+    remover_quebra_linha(buffer);
+    if (strlen(buffer) > 0) strcpy(c->data_nascimento, buffer);
+
+    printf("Dados atualizados!\n");
+    pausar_tela();
+}
