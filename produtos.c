@@ -173,3 +173,13 @@ void ordenar_produtos_codigo(Produto *head) {
         lptr = ptr1;
     } while (trocou);
 }
+
+// Limpeza de memoria
+void liberar_produtos(Produto *head) {
+    Produto *atual = head;
+    while (atual != NULL) {
+        Produto *prox = atual->prox;
+        free(atual); // Limpa a heap
+        atual = prox;
+    }
+}
