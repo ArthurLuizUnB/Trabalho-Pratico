@@ -245,3 +245,171 @@ void liberar_carrinho(ItemCarrinho *head) {
         atual = prox;
     }
 }
+
+// --- LOGICA DO CARRINHO ---
+
+void adicionar_ao_carrinho(Cliente *cliente, Produto *lista_produtos) {
+    int codigo, qtd;
+    printf("Codigo do produto a comprar: ");
+    scanf("%d", &codigo);
+    limpar_buffer();
+
+    // Valida se o produto realmente existe no catalogo
+    Produto *prod = buscar_produto(lista_produtos, codigo);
+    if (prod == NULL) {
+        printf("Erro: Produto nao existe no catalogo.\n");
+        pausar_tela();
+        return;
+    }
+
+    printf("Quantidade desejada: ");
+    scanf("%d", &qtd);
+    limpar_buffer();
+
+    if (qtd <= 0) {
+        printf("Quantidade invalida.\n");
+        pausar_tela();
+        return;
+    }
+
+    // Aviso de estoque (Nao bloqueante por decisao da equipe, mas avisa o usuario)
+    if (qtd > prod->quantidade_estoque) {
+        printf("Aviso: Estoque insuficiente (Disponivel: %d). Adicionando mesmo assim.\n", prod->quantidade_estoque);
+    }
+
+    // Cria novo no de compra
+    ItemCarrinho *novo = (ItemCarrinho*) alloc_check(sizeof(ItemCarrinho));
+    novo->codigo_produto = codigo;
+    novo->quantidade = qtd;
+    
+    // Insere no inicio da lista de compras do cliente
+    novo->prox = cliente->carrinho;
+    cliente->carrinho = novo;
+
+    printf("Item adicionado ao carrinho!\n");
+    pausar_tela();
+}
+
+void listar_carrinho(Cliente *cliente, Produto *lista_produtos) {
+    printf("\n--- Carrinho de Compras: %s ---\n", cliente->nome);
+    if (cliente->carrinho == NULL) {
+        printf("Carrinho vazio.\n");
+        pausar_tela();
+        return;
+    }
+
+    ItemCarrinho *item = cliente->carrinho;
+    float total_valor = 0;
+    int total_itens = 0;
+
+    while (item != NULL) {
+        // Cross-Referencing: Temos o ID no carrinho, buscamos os detalhes (Nome/Preco) na lista de produtos.
+        // Isso garante que se o preco mudar na loja, o carrinho reflete o preco novo.
+        Produto *prod = buscar_produto(lista_produtos, item->codigo_produto);
+        
+        if (prod != NULL) {
+            float subtotal = prod->preco * item->quantidade;
+            printf("%d un. x %s (R$ %.2f) = R$ %.2f\n", 
+                   item->quantidade, prod->nome, prod->preco, subtotal);
+            
+            total_valor += subtotal;
+            total_itens += item->quantidade;
+        } else {
+            // Tratamento de erro: Produto foi deletado da loja mas o cliente ainda tinha no carrinho
+            printf("[Item Cod %d - Produto nao cadastrado/removido]\n", item->codigo_produto);
+        }
+        item = item->prox;
+    }
+    printf("--------------------------\n");
+    printf("Total Itens: %d | Valor Total: R$ %.2f\n", total_itens, total_valor);
+    pausar_tela();
+}
+
+void remover_do_carrinho(Cliente *cliente) {
+    int codigo;
+    printf("Codigo do produto para remover: ");
+    scanf("%d", &codigo);
+    limpar_buffer();
+
+    ItemCarrinho *atual = cliente->carrinho;
+    ItemCarrinho *ant = NULL;
+
+    // Busca padrao em lista encadeada
+    while (atual != NULL && atual->codigo_produto != codigo) {
+        ant = atual;
+        atual = atual->prox;
+    }
+
+    if (atual == NULL) {
+        printf("Item nao encontrado no carrinho.\n");
+        pausar_tela();
+        return;
+    }
+
+    // Remocao de lista encadeada
+    if (ant == NULL) {
+        cliente->carrinho = atual->prox;
+    } else {
+        ant->prox = atual->prox;
+    }
+
+    free(atual);
+    printf("Item removido do carrinho.\n");
+    pausar_tela();
+}
+
+// Implementacao da finalizacao da compra
+// faz a baixa no estoque e limpa o carrinho.
+void finalizar_compra(Cliente *cliente, Produto *lista_produtos) {
+    if (cliente->carrinho == NULL) {
+        printf("Carrinho vazio. Nada para comprar.\n");
+        pausar_tela();
+        return;
+    }
+
+    // Etapa 1: verificacao
+    // Antes de mexer no estoque, verificamos se todos os itens tem saldo.
+    // se um nao tiver, cancelamos tudo.
+    ItemCarrinho *item = cliente->carrinho;
+    while (item != NULL) {
+        Produto *prod = buscar_produto(lista_produtos, item->codigo_produto);
+        
+        if (prod == NULL) {
+            printf("Erro Critico: Produto ID %d nao existe mais no catalogo. Remova-o antes.\n", item->codigo_produto);
+            pausar_tela();
+            return;
+        }
+        if (prod->quantidade_estoque < item->quantidade) {
+            printf("Erro: Produto '%s' sem estoque suficiente (Disp: %d, Pedido: %d).\n", 
+                   prod->nome, prod->quantidade_estoque, item->quantidade);
+            printf("Compra cancelada. Ajuste o carrinho.\n");
+            pausar_tela();
+            return;
+        }
+        item = item->prox;
+    }
+
+    // Etapa 2: efetivacao
+    // Ja que passou na validacao, podemos baixar o estoque
+    item = cliente->carrinho;
+    float total_pago = 0;
+    
+    while (item != NULL) {
+        Produto *prod = buscar_produto(lista_produtos, item->codigo_produto);
+        
+        // Baixa no estoque
+        prod->quantidade_estoque -= item->quantidade;
+        total_pago += prod->preco * item->quantidade;
+        
+        item = item->prox;
+    }
+
+    // Limpa o carrinho da memoria (venda feita)
+    liberar_carrinho(cliente->carrinho);
+    cliente->carrinho = NULL;
+
+    printf("\n=== COMPRA FINALIZADA COM SUCESSO! ===\n");
+    printf("Estoque atualizado.\n");
+    printf("Valor Total Pago: R$ %.2f\n", total_pago);
+    pausar_tela();
+}

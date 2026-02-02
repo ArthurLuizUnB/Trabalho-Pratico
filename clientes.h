@@ -38,10 +38,11 @@ void ordenar_clientes_nome(Cliente *head);
 void liberar_clientes(Cliente *head);
 
 // --- Operacoes de Carrinho ---
-// Adicionamos essas funcoes aqui pois sao dependentes da struct Cliente
+// funcoes adicionadas aqui pois sao dependentes da struct Cliente
 void adicionar_ao_carrinho(Cliente *cliente, Produto *lista_produtos);
 void listar_carrinho(Cliente *cliente, Produto *lista_produtos);
 void remover_do_carrinho(Cliente *cliente);
 void liberar_carrinho(ItemCarrinho *head);
+void finalizar_compra(Cliente *cliente, Produto *lista_produtos);
 
 #endif
