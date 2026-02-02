@@ -413,3 +413,132 @@ void finalizar_compra(Cliente *cliente, Produto *lista_produtos) {
     printf("Valor Total Pago: R$ %.2f\n", total_pago);
     pausar_tela();
 }
+
+// --- LOGICA DE PERSISTENCIA (Relacional) ---
+
+void salvar_clientes_arquivo(Cliente *head) {
+    FILE *arq = fopen("clientes.txt", "w");
+    if (arq == NULL) {
+        printf("Erro de permissao ao salvar clientes.\n");
+        return;
+    }
+
+    // Cabecalho
+    fprintf(arq, "CPF;NOME;EMAIL;TELEFONE;NASCIMENTO\n");
+
+    Cliente *atual = head;
+    while (atual != NULL) {
+        fprintf(arq, "%s;%s;%s;%s;%s\n", 
+            atual->cpf, atual->nome, atual->email, atual->telefone, atual->data_nascimento);
+        atual = atual->prox;
+    }
+    fclose(arq);
+    
+    // Apos salvar os clientes, salvamos os relacionamentos (carrinhos)
+    // Se nao fizermos isso, perde-se ohistorico de compras ao fechar o programa.
+    salvar_carrinhos_arquivo(head);
+    printf("Backup de clientes e carrinhos realizado.\n");
+}
+
+void carregar_clientes_arquivo(Cliente **head) {
+    FILE *arq = fopen("clientes.txt", "r");
+    if (arq == NULL) return;
+
+    char lixo[256];
+    if (fgets(lixo, sizeof(lixo), arq) == NULL) {
+        fclose(arq);
+        return;
+    }
+
+    while (!feof(arq)) {
+        Cliente *novo = (Cliente*) alloc_check(sizeof(Cliente));
+        novo->carrinho = NULL;
+
+        int res = fscanf(arq, "%14[^;];%49[^;];%79[^;];%19[^;];%14[^\n]\n", 
+               novo->cpf, novo->nome, novo->email, novo->telefone, novo->data_nascimento);
+        
+        if (res == 5) {
+            // Sucesso na leitura, insere na lista encadeada
+            novo->prox = *head;
+            *head = novo;
+        } else {
+            // Falha na leitura (linha em branco ou corrompida), libera pra nao vazar memoria
+            free(novo);
+        }
+    }
+    fclose(arq);
+    
+    // Com os clientes na memoria, carregamos as compras deles
+    carregar_carrinhos_arquivo(*head);
+}
+
+/*
+ * Salva os carrinhos num arquivo separado (carrinhos.txt).
+ * Logica: "Normalizacao" de banco de dados. 
+ * Em vez de salvar a lista de produtos dentro da linha do cliente (o que seria um caos pra ler depois),
+ * salvamos em um arquivo separado relacionando CPF -> ID_PRODUTO.
+ */
+void salvar_carrinhos_arquivo(Cliente *lista_clientes) {
+    FILE *arq = fopen("carrinhos.txt", "w");
+    if (arq == NULL) return; // Se falhar permissao, segue a vida sem travar
+
+    // Cabecalho CSV
+    fprintf(arq, "CPF_CLIENTE;COD_PRODUTO;QUANTIDADE\n");
+
+    // Nested Loop:
+    // 1. Percorre a lista de clientes
+    Cliente *cli = lista_clientes;
+    while (cli != NULL) {
+        // 2. Para cada cliente, percorre a lista de compras dele
+        ItemCarrinho *item = cli->carrinho;
+        while (item != NULL) {
+            // Salva a relacao: Quem comprou (CPF) -> O que (ID) -> Quanto
+            fprintf(arq, "%s;%d;%d\n", cli->cpf, item->codigo_produto, item->quantidade);
+            item = item->prox;
+        }
+        cli = cli->prox;
+    }
+    fclose(arq);
+}
+
+/*
+ * Le o arquivo de carrinhos e reconecta os itens aos seus donos (Clientes)
+ * baseando-se no CPF salvo.
+ * So deve ser chamada depois que a lista de clientes ja estiver na memoria.
+ */
+void carregar_carrinhos_arquivo(Cliente *lista_clientes) {
+    FILE *arq = fopen("carrinhos.txt", "r");
+    if (arq == NULL) return; // Arquivo nao existe na primeira vez, continua.
+
+    // Descarta cabecalho
+    char lixo[256];
+    if (fgets(lixo, sizeof(lixo), arq) == NULL) {
+        fclose(arq);
+        return; 
+    }
+
+    char cpf_lido[15];
+    int cod_prod, qtd;
+
+    while (!feof(arq)) {
+        if (fscanf(arq, "%14[^;];%d;%d\n", cpf_lido, &cod_prod, &qtd) == 3) {
+            
+            // Busca o ponteiro do cliente na memoria RAM usando o CPF lido do arquivo
+            Cliente *dono = buscar_cliente(lista_clientes, cpf_lido);
+            
+            if (dono != NULL) {
+                // Se achou o dono, aloca o item de carrinho e pendura na lista dele
+                ItemCarrinho *novo = (ItemCarrinho*) alloc_check(sizeof(ItemCarrinho));
+                novo->codigo_produto = cod_prod;
+                novo->quantidade = qtd;
+                
+                // Insere no inicio da lista do cliente
+                novo->prox = dono->carrinho;
+                dono->carrinho = novo;
+            }
+            // Se dono == NULL (ex: cliente foi deletado manualmente do txt), 
+            // a compra fica orfa e eh ignorada.
+        }
+    }
+    fclose(arq);
+}

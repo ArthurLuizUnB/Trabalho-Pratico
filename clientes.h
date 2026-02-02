@@ -45,4 +45,10 @@ void remover_do_carrinho(Cliente *cliente);
 void liberar_carrinho(ItemCarrinho *head);
 void finalizar_compra(Cliente *cliente, Produto *lista_produtos);
 
+// --- Persistencia ---
+void salvar_clientes_arquivo(Cliente *head);
+void carregar_clientes_arquivo(Cliente **head);
+void salvar_carrinhos_arquivo(Cliente *lista_clientes);
+void carregar_carrinhos_arquivo(Cliente *lista_clientes);
+
 #endif
