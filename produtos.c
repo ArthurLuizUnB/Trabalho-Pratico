@@ -183,3 +183,56 @@ void liberar_produtos(Produto *head) {
         atual = prox;
     }
 }
+
+// --- PERSISTENCIA EM ARQUIVO ---
+
+void salvar_produtos_arquivo(Produto *head) {
+    FILE *arq = fopen("produtos.txt", "w");
+    if (arq == NULL) {
+        printf("Aviso: Nao foi possivel criar o arquivo de produtos (permissao?).\n");
+        return;
+    }
+
+    // Cabecalho CSV
+    fprintf(arq, "CODIGO;NOME;PRECO;ESTOQUE\n");
+
+    Produto *atual = head;
+    while (atual != NULL) {
+        fprintf(arq, "%d;%s;%.2f;%d\n", 
+                atual->codigo, atual->nome, atual->preco, atual->quantidade_estoque);
+        atual = atual->prox;
+    }
+    fclose(arq);
+    printf("Backup de produtos realizado.\n");
+}
+
+void carregar_produtos_arquivo(Produto **head) {
+    FILE *arq = fopen("produtos.txt", "r");
+    if (arq == NULL) return; // Arquivo nao existe (na primeira execucao), segue normal.
+
+    // Buffer para ler e descartar a primeira linha (cabecalho)
+    char buffer_lixo[256];
+    if (fgets(buffer_lixo, sizeof(buffer_lixo), arq) == NULL) {
+        fclose(arq);
+        return; // Arquivo vazio
+    }
+
+    while (!feof(arq)) {
+        Produto *novo = (Produto*) alloc_check(sizeof(Produto));
+        
+        int res = fscanf(arq, "%d;%49[^;];%f;%d\n", 
+                         &novo->codigo, novo->nome, &novo->preco, &novo->quantidade_estoque);
+        
+        if (res == 4) { // Se leu os 4 campos com sucesso
+            // Insere no inicio (pilha) pois eh mais rapido O(1)
+            novo->prox = *head;
+            *head = novo;
+        } else {
+            free(novo); // Leitura falhou, libera a memoria
+        }
+    }
+    fclose(arq);
+    
+    // Como inserimos no inicio, a lista fica invertida. Ordenamos aqui.
+    ordenar_produtos_codigo(*head); 
+}

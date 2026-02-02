@@ -22,5 +22,10 @@ void listar_produtos(Produto *head);
 Produto* buscar_produto(Produto *head, int codigo);
 void editar_produto(Produto *head);
 void ordenar_produtos_codigo(Produto *head);
+void liberar_produtos(Produto *head);
+
+// --- Persistencia ---
+void salvar_produtos_arquivo(Produto *head);
+void carregar_produtos_arquivo(Produto **head);
 
 #endif
